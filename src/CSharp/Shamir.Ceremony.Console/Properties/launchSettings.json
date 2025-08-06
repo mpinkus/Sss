@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Shamir.Ceremony.Console": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
