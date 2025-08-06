@@ -1,0 +1,204 @@
+@page "/session-history"
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Session History</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="Icons.Material.Filled.History" Class="mr-3" />
+        Session History
+    </MudText>
+
+    <MudCard Elevation="2">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Recent Ceremony Sessions</MudText>
+            
+            @if (isLoading)
+            {
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Class="ml-3">Loading session history...</MudText>
+            }
+            else if (sessions.Any())
+            {
+                <MudTable Items="@sessions" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>Session ID</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Progress</MudTh>
+                        <MudTh>Last Updated</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Session ID">
+                            <MudText Typo="Typo.body2" Class="font-monospace">@context.SessionId</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(context.Type)">
+                                @context.Type
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Progress">
+                            <MudProgressLinear Value="@context.ProgressPercentage" Color="Color.Primary" />
+                            <MudText Typo="Typo.caption">@context.ProgressPercentage%</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Last Updated">
+                            <MudText Typo="Typo.body2">@context.LastUpdated.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="Icons.Material.Filled.Visibility" 
+                                         Size="Size.Small" 
+                                         OnClick="@(() => ViewSessionDetails(context.SessionId))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    No ceremony sessions found. Start a new ceremony to see session history here.
+                </MudAlert>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    @if (selectedSession != null)
+    {
+        <MudDialog @bind-Visible="showSessionDetails" Options="dialogOptions">
+            <TitleContent>
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="Icons.Material.Filled.Info" Class="mr-3" />
+                    Session Details
+                </MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudSimpleTable>
+                    <tbody>
+                        <tr>
+                            <td><strong>Session ID:</strong></td>
+                            <td class="font-monospace">@selectedSession.SessionId</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(selectedSession.Status)">
+                                    @selectedSession.Status
+                                </MudChip>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Progress:</strong></td>
+                            <td>@selectedSession.ProgressPercentage%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Current Step:</strong></td>
+                            <td>@selectedSession.CurrentStep</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Last Updated:</strong></td>
+                            <td>@selectedSession.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                @if (selectedSession.Events.Any())
+                {
+                    <MudText Typo="Typo.h6" Class="mt-4 mb-2">Event Log</MudText>
+                    <MudPaper Class="pa-3" Style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var evt in selectedSession.Events)
+                        {
+                            <MudText Typo="Typo.body2" Class="mb-1 font-monospace">@evt</MudText>
+                        }
+                    </MudPaper>
+                }
+            </DialogContent>
+            <DialogActions>
+                <MudButton OnClick="CloseSessionDetails">Close</MudButton>
+            </DialogActions>
+        </MudDialog>
+    }
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private List<SessionSummary> sessions = new();
+    private SessionSummary? selectedSession;
+    private bool showSessionDetails = false;
+    
+    private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSessionHistory();
+    }
+
+    private async Task LoadSessionHistory()
+    {
+        try
+        {
+            isLoading = true;
+            
+            await Task.Delay(1000);
+            
+            sessions = new List<SessionSummary>
+            {
+                new() { SessionId = "abc123def456", Type = "CREATE_SHARES", Status = "COMPLETED", ProgressPercentage = 100, LastUpdated = DateTime.Now.AddHours(-2), CurrentStep = "Ceremony completed", Events = new() { "2024-01-01 10:00:00 - Started", "2024-01-01 10:05:00 - Completed" } },
+                new() { SessionId = "def456ghi789", Type = "RECONSTRUCT_SECRET", Status = "FAILED", ProgressPercentage = 75, LastUpdated = DateTime.Now.AddHours(-5), CurrentStep = "Authentication failed", Events = new() { "2024-01-01 08:00:00 - Started", "2024-01-01 08:03:00 - Failed" } },
+                new() { SessionId = "ghi789jkl012", Type = "CREATE_SHARES", Status = "IN_PROGRESS", ProgressPercentage = 45, LastUpdated = DateTime.Now.AddMinutes(-30), CurrentStep = "Collecting keeper information", Events = new() { "2024-01-01 09:30:00 - Started", "2024-01-01 09:35:00 - In progress" } }
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading session history: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "COMPLETED" => Color.Success,
+        "FAILED" => Color.Error,
+        "IN_PROGRESS" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private Color GetTypeColor(string type) => type switch
+    {
+        "CREATE_SHARES" => Color.Primary,
+        "RECONSTRUCT_SECRET" => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private void ViewSessionDetails(string sessionId)
+    {
+        selectedSession = sessions.FirstOrDefault(s => s.SessionId == sessionId);
+        showSessionDetails = true;
+    }
+
+    private void CloseSessionDetails()
+    {
+        showSessionDetails = false;
+        selectedSession = null;
+    }
+
+    private class SessionSummary
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public int ProgressPercentage { get; set; }
+        public string CurrentStep { get; set; } = string.Empty;
+        public DateTime LastUpdated { get; set; }
+        public List<string> Events { get; set; } = new();
+    }
+}

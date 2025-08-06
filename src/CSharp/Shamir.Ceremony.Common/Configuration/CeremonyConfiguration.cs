@@ -8,6 +8,7 @@ public class CeremonyConfiguration
     public FileSystemSettings FileSystem { get; set; } = new();
     public OrganizationSettings Organization { get; set; } = new();
     public List<DefaultKeeperSettings> DefaultKeepers { get; set; } = new();
+    public MongoDbSettings MongoDb { get; set; } = new();
 
     public static CeremonyConfiguration FromConfiguration(IConfiguration configuration)
     {
@@ -35,6 +36,10 @@ public class CeremonyConfiguration
         {
             config.DefaultKeepers = defaultKeepers;
         }
+
+        config.MongoDb.ConnectionString = configuration.GetValue<string>("MongoDb:ConnectionString") ?? "mongodb://localhost:27017";
+        config.MongoDb.DatabaseName = configuration.GetValue<string>("MongoDb:DatabaseName") ?? "ShamirCeremony";
+        config.MongoDb.CollectionName = configuration.GetValue<string>("MongoDb:CollectionName") ?? "KeyValueStore";
 
         return config;
     }
@@ -73,4 +78,11 @@ public class DefaultKeeperSettings
     public string Department { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public int PreferredOrder { get; set; }
+}
+
+public class MongoDbSettings
+{
+    public string ConnectionString { get; set; } = "mongodb://localhost:27017";
+    public string DatabaseName { get; set; } = "ShamirCeremony";
+    public string CollectionName { get; set; } = "KeyValueStore";
 }
