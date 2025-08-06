@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36310.24 d17.14
+VisualStudioVersion = 17.14.36310.24
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shamir.Ceremony.Console", "Shamir.Ceremony.Console\Shamir.Ceremony.Console.csproj", "{9AFF625C-E685-4A8F-A32A-8C0025727877}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shamir.Ceremony.Common", "Shamir.Ceremony.Common\Shamir.Ceremony.Common.csproj", "{156E1459-D977-47D6-A1E5-5D2FC9B2C9B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shamir.Ceremony.Common.Tests", "Shamir.Ceremony.Common.Tests\Shamir.Ceremony.Common.Tests.csproj", "{8D8F002D-9689-4E98-9808-29521F1147BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{156E1459-D977-47D6-A1E5-5D2FC9B2C9B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{156E1459-D977-47D6-A1E5-5D2FC9B2C9B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{156E1459-D977-47D6-A1E5-5D2FC9B2C9B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D8F002D-9689-4E98-9808-29521F1147BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D8F002D-9689-4E98-9808-29521F1147BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D8F002D-9689-4E98-9808-29521F1147BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D8F002D-9689-4E98-9808-29521F1147BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
