@@ -10,6 +10,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="MSTest" Version="3.6.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+    <PackageReference Include="Testcontainers.MongoDb" Version="4.0.0" />
+    <PackageReference Include="FluentAssertions" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shamir.Ceremony.Web.Api\Shamir.Ceremony.Web.Api.csproj" />
+    <ProjectReference Include="..\Shamir.Ceremony.Common\Shamir.Ceremony.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
