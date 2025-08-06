@@ -20,5 +20,9 @@
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shamir.Ceremony.Common\Shamir.Ceremony.Common.csproj" />
+  </ItemGroup>
 	
 </Project>

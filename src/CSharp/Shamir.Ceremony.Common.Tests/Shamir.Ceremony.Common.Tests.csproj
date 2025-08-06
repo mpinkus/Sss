@@ -16,4 +16,8 @@
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Shamir.Ceremony.Common\Shamir.Ceremony.Common.csproj" />
+  </ItemGroup>
+
 </Project>
