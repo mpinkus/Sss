@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shamir.Ceremony.Common", "S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shamir.Ceremony.Common.Tests", "Shamir.Ceremony.Common.Tests\Shamir.Ceremony.Common.Tests.csproj", "{8D8F002D-9689-4E98-9808-29521F1147BB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shamir.Ceremony.Common.Tests.Integration", "Shamir.Ceremony.Common.Tests.Integration\Shamir.Ceremony.Common.Tests.Integration.csproj", "{34F2ABC9-478D-4A93-A63B-ECAC5DD65824}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{8D8F002D-9689-4E98-9808-29521F1147BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D8F002D-9689-4E98-9808-29521F1147BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D8F002D-9689-4E98-9808-29521F1147BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34F2ABC9-478D-4A93-A63B-ECAC5DD65824}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34F2ABC9-478D-4A93-A63B-ECAC5DD65824}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34F2ABC9-478D-4A93-A63B-ECAC5DD65824}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34F2ABC9-478D-4A93-A63B-ECAC5DD65824}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
