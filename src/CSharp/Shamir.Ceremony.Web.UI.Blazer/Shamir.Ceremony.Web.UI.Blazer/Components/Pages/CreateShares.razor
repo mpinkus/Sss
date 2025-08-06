@@ -1,0 +1,348 @@
+@page "/create-shares"
+@using MudBlazor
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Create Secret Shares</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="Icons.Material.Filled.Add" Class="mr-3" />
+        Create Secret Shares
+    </MudText>
+
+    <MudStepper @ref="stepper" Color="Color.Primary" Variant="Variant.Filled" HeaderTextView="HeaderTextView.All">
+        <MudStep Title="Configuration" Icon="Icons.Material.Filled.Settings">
+            <ChildContent>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="threshold" 
+                                       Label="Threshold (Minimum Shares Required)" 
+                                       Min="2" Max="100" 
+                                       HelperText="Minimum number of shares needed to reconstruct the secret" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="totalShares" 
+                                       Label="Total Shares" 
+                                       Min="@threshold" Max="100" 
+                                       HelperText="Total number of shares to create" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSwitch @bind-Value="generateRandomSecret" 
+                                 Label="Generate Random Secret" 
+                                 Color="Color.Primary" />
+                    </MudItem>
+                    @if (!generateRandomSecret)
+                    {
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="customSecret" 
+                                        Label="Custom Secret" 
+                                        InputType="InputType.Password" 
+                                        HelperText="Enter your custom secret" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </ChildContent>
+        </MudStep>
+
+        <MudStep Title="Organization" Icon="Icons.Material.Filled.Business">
+            <ChildContent>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="organizationName" 
+                                    Label="Organization Name" 
+                                    Required="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="organizationPhone" 
+                                    Label="Contact Phone" 
+                                    Required="true" />
+                    </MudItem>
+                </MudGrid>
+            </ChildContent>
+        </MudStep>
+
+        <MudStep Title="Keepers" Icon="Icons.Material.Filled.People">
+            <ChildContent>
+                <MudText Typo="Typo.h6" Class="mb-4">Configure Secret Keepers</MudText>
+                @for (int i = 0; i < totalShares; i++)
+                {
+                    var index = i;
+                    <MudCard Class="mb-4" Elevation="1">
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6" Class="mb-3">Keeper @(index + 1)</MudText>
+                            <MudGrid>
+                                <MudItem xs="12" md="4">
+                                    <MudTextField @bind-Value="keepers[index].Name" 
+                                                Label="Name" 
+                                                Required="true" />
+                                </MudItem>
+                                <MudItem xs="12" md="4">
+                                    <MudTextField @bind-Value="keepers[index].Phone" 
+                                                Label="Phone" 
+                                                Required="true" />
+                                </MudItem>
+                                <MudItem xs="12" md="4">
+                                    <MudTextField @bind-Value="keepers[index].Email" 
+                                                Label="Email" 
+                                                Required="true" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="keepers[index].Password" 
+                                                Label="Password" 
+                                                InputType="InputType.Password" 
+                                                Required="true" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
+                }
+            </ChildContent>
+        </MudStep>
+
+        <MudStep Title="Review & Execute" Icon="Icons.Material.Filled.PlayArrow">
+            <ChildContent>
+                <MudText Typo="Typo.h6" Class="mb-4">Review Configuration</MudText>
+                <MudSimpleTable Elevation="1">
+                    <tbody>
+                        <tr>
+                            <td><strong>Threshold:</strong></td>
+                            <td>@threshold</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Shares:</strong></td>
+                            <td>@totalShares</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Secret Type:</strong></td>
+                            <td>@(generateRandomSecret ? "System Generated" : "User Provided")</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Organization:</strong></td>
+                            <td>@organizationName</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                @if (isProcessing)
+                {
+                    <MudCard Class="mt-4" Elevation="2">
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6" Class="mb-3">Ceremony Progress</MudText>
+                            <MudProgressLinear Value="progressPercentage" Color="Color.Primary" Class="mb-2" />
+                            <MudText Typo="Typo.body2">@currentMessage</MudText>
+                            
+                            @if (events.Any())
+                            {
+                                <MudExpansionPanels Class="mt-4">
+                                    <MudExpansionPanel Text="Event Log">
+                                        @foreach (var evt in events.TakeLast(10))
+                                        {
+                                            <MudText Typo="Typo.body2" Class="mb-1">@evt</MudText>
+                                        }
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                }
+                else if (ceremonyCompleted)
+                {
+                    <MudAlert Severity="Severity.Success" Class="mt-4">
+                        <MudText Typo="Typo.body1">
+                            <strong>Ceremony Completed Successfully!</strong><br />
+                            Session ID: @sessionId<br />
+                            @completionMessage
+                        </MudText>
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Primary" 
+                             StartIcon="Icons.Material.Filled.PlayArrow"
+                             OnClick="StartCeremony"
+                             Class="mt-4"
+                             Size="Size.Large">
+                        Start Ceremony
+                    </MudButton>
+                }
+            </ChildContent>
+        </MudStep>
+    </MudStepper>
+</MudContainer>
+
+@code {
+    private MudStepper stepper = null!;
+    private HubConnection? hubConnection;
+    
+    private int threshold = 3;
+    private int totalShares = 5;
+    private bool generateRandomSecret = true;
+    private string customSecret = string.Empty;
+    private string organizationName = "Example Organization";
+    private string organizationPhone = "+1-555-0123";
+    
+    private List<KeeperInfo> keepers = new();
+    
+    private bool isProcessing = false;
+    private bool ceremonyCompleted = false;
+    private int progressPercentage = 0;
+    private string currentMessage = string.Empty;
+    private string sessionId = string.Empty;
+    private string completionMessage = string.Empty;
+    private List<string> events = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeKeepers();
+        
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/ceremonyhub"))
+            .Build();
+
+        hubConnection.On<object>("ProgressUpdate", (data) =>
+        {
+            var json = JsonSerializer.Serialize(data);
+            var update = JsonSerializer.Deserialize<ProgressUpdate>(json);
+            if (update != null)
+            {
+                progressPercentage = update.PercentComplete ?? 0;
+                currentMessage = update.Message ?? string.Empty;
+                events.Add($"{DateTime.Now:HH:mm:ss} - {currentMessage}");
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        hubConnection.On<object>("CeremonyCompleted", (data) =>
+        {
+            var json = JsonSerializer.Serialize(data);
+            var completion = JsonSerializer.Deserialize<CeremonyCompletion>(json);
+            if (completion != null)
+            {
+                isProcessing = false;
+                ceremonyCompleted = completion.Success;
+                completionMessage = completion.Message ?? string.Empty;
+                sessionId = completion.SessionId ?? string.Empty;
+                InvokeAsync(StateHasChanged);
+                
+                if (completion.Success)
+                {
+                    Snackbar.Add("Ceremony completed successfully!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Ceremony failed: " + completionMessage, Severity.Error);
+                }
+            }
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private void InitializeKeepers()
+    {
+        keepers.Clear();
+        for (int i = 0; i < Math.Max(totalShares, 5); i++)
+        {
+            keepers.Add(new KeeperInfo
+            {
+                Name = $"Keeper {i + 1}",
+                Phone = $"+1-555-010{i + 1}",
+                Email = $"keeper{i + 1}@example.com",
+                Password = $"SecurePass{i + 1}!"
+            });
+        }
+    }
+
+    private async Task StartCeremony()
+    {
+        try
+        {
+            isProcessing = true;
+            ceremonyCompleted = false;
+            progressPercentage = 0;
+            currentMessage = "Initializing ceremony...";
+            events.Clear();
+            
+            var request = new CreateSharesRequest
+            {
+                Threshold = threshold,
+                TotalShares = totalShares,
+                Secret = generateRandomSecret ? null : customSecret,
+                GenerateRandomSecret = generateRandomSecret,
+                Organization = new OrganizationInfo
+                {
+                    Name = organizationName,
+                    ContactPhone = organizationPhone
+                },
+                Keepers = keepers.Take(totalShares).ToList()
+            };
+
+            var response = await Http.PostAsJsonAsync("api/ceremony/create-shares", request);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"API call failed: {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            isProcessing = false;
+            Snackbar.Add($"Error starting ceremony: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private class ProgressUpdate
+    {
+        public string? SessionId { get; set; }
+        public string? Message { get; set; }
+        public int? PercentComplete { get; set; }
+        public string? EventType { get; set; }
+    }
+
+    private class CeremonyCompletion
+    {
+        public string? Type { get; set; }
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public string? SessionId { get; set; }
+    }
+
+    private class CreateSharesRequest
+    {
+        public int Threshold { get; set; }
+        public int TotalShares { get; set; }
+        public string? Secret { get; set; }
+        public bool GenerateRandomSecret { get; set; }
+        public OrganizationInfo? Organization { get; set; }
+        public List<KeeperInfo> Keepers { get; set; } = new();
+    }
+
+    private class KeeperInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private class OrganizationInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public string ContactPhone { get; set; } = string.Empty;
+    }
+}

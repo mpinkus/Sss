@@ -16,6 +16,11 @@ namespace Shamir.Ceremony.Web.UI.Blazer
             builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+            builder.Services.AddScoped(sp => new HttpClient 
+            { 
+                BaseAddress = new Uri("https://localhost:7000") 
+            });
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

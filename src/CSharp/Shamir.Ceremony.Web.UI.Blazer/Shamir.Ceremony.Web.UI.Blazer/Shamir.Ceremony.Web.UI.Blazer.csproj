@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shamir.Ceremony.Web.UI.Blazer.Client\Shamir.Ceremony.Web.UI.Blazer.Client.csproj" />
+    <ProjectReference Include="..\..\Shamir.Ceremony.Common\Shamir.Ceremony.Common.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.*" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
   </ItemGroup>
 
 </Project>
