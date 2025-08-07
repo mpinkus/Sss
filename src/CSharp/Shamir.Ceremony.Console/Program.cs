@@ -2,15 +2,21 @@ using System.Security;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using Shamir.Ceremony.Common;
 using Shamir.Ceremony.Common.Configuration;
 using Shamir.Ceremony.Common.Events;
+using Shamir.Ceremony.Common.Services;
 
 namespace ShamirSecretSharing;
 
 class Program
 {
     private static CeremonyManager? _ceremonyManager;
+    private static IStructuredLogger? _structuredLogger;
     private static readonly Dictionary<string, TaskCompletionSource<object>> _pendingInputRequests = new();
     private const int MAX_RETRY_ATTEMPTS = 3;
 
@@ -27,6 +33,7 @@ class Program
         }
         catch (Exception ex)
         {
+            _structuredLogger?.LogException(ex, "Main application error", "main");
             Console.WriteLine($"\nError: {ex.Message}");
             if (ex.InnerException != null)
             {
@@ -36,6 +43,8 @@ class Program
         finally
         {
             _ceremonyManager?.FinalizeSession();
+            _structuredLogger?.LogInformation("Application shutting down", new { });
+            Log.CloseAndFlush();
             Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
         }
@@ -53,6 +62,20 @@ class Program
 
     static async Task InitializeApplicationAsync()
     {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .Enrich.FromLogContext()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+            .WriteTo.File("logs/console-.log", 
+                rollingInterval: RollingInterval.Day,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+            .CreateLogger();
+
+        using var loggerFactory = LoggerFactory.Create(builder =>
+            builder.AddSerilog(Log.Logger));
+        var logger = loggerFactory.CreateLogger<StructuredLogger>();
+        _structuredLogger = new StructuredLogger(logger);
+
         var builder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
@@ -63,13 +86,29 @@ class Program
         string configPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
         if (File.Exists(configPath))
         {
+            _structuredLogger.LogInformation("Configuration loaded from path", new { ConfigPath = configPath });
             Console.WriteLine($"✓ Configuration loaded from: {configPath}");
         }
         else
         {
+            _structuredLogger.LogWarning("No configuration file found, using defaults", new { ConfigPath = configPath });
             Console.WriteLine($"⚠ No configuration file found at: {configPath}");
             Console.WriteLine("  Using default settings.");
         }
+
+        _structuredLogger.LogInformation("Active configuration loaded", new 
+        { 
+            MinPasswordLength = ceremonyConfig.Security.MinPasswordLength,
+            RequireUppercase = ceremonyConfig.Security.RequireUppercase,
+            RequireLowercase = ceremonyConfig.Security.RequireLowercase,
+            RequireDigit = ceremonyConfig.Security.RequireDigit,
+            RequireSpecialCharacter = ceremonyConfig.Security.RequireSpecialCharacter,
+            KdfIterations = ceremonyConfig.Security.KdfIterations,
+            SecureDeletePasses = ceremonyConfig.Security.SecureDeletePasses,
+            ConfirmationRequired = ceremonyConfig.Security.ConfirmationRequired,
+            AuditLogEnabled = ceremonyConfig.Security.AuditLogEnabled,
+            AuditLogRetentionDays = ceremonyConfig.Security.AuditLogRetentionDays
+        });
 
         Console.WriteLine("\n=== Active Configuration ===");
         Console.WriteLine($"Min Password Length: {ceremonyConfig.Security.MinPasswordLength}");
@@ -79,11 +118,13 @@ class Program
         Console.WriteLine($"Confirmation Required: {ceremonyConfig.Security.ConfirmationRequired}");
         Console.WriteLine($"Audit Log: Enabled={ceremonyConfig.Security.AuditLogEnabled}, Retention={ceremonyConfig.Security.AuditLogRetentionDays} days");
 
-        _ceremonyManager = new CeremonyManager(ceremonyConfig);
+        _ceremonyManager = new CeremonyManager(ceremonyConfig, _structuredLogger);
         _ceremonyManager.ProgressUpdated += OnProgressUpdated;
         _ceremonyManager.InputRequested += OnInputRequested;
         _ceremonyManager.ValidationResult += OnValidationResult;
         _ceremonyManager.OperationCompleted += OnOperationCompleted;
+
+        _structuredLogger.LogInformation("Ceremony manager initialized successfully", new { DefaultKeepersCount = ceremonyConfig.DefaultKeepers.Count });
 
         Console.WriteLine("\n=== Shamir's Secret Sharing System ===");
         Console.WriteLine("Ceremony Manager Initialized");
@@ -142,10 +183,12 @@ class Program
 
     static async Task CreateSharesAsync()
     {
+        _structuredLogger?.LogInformation("Starting create shares operation", new { });
         Console.WriteLine("\n=== Create Secret Shares ===\n");
         
         if (_ceremonyManager == null)
         {
+            _structuredLogger?.LogError("Ceremony manager not initialized for create shares", new { });
             Console.WriteLine("✗ Ceremony manager not initialized");
             return;
         }
@@ -154,6 +197,12 @@ class Program
         
         if (result.Success)
         {
+            _structuredLogger?.LogInformation("Secret shares created successfully", new 
+            { 
+                OutputFilePath = result.OutputFilePath,
+                ThresholdRequired = result.SharesData?.Configuration.ThresholdRequired,
+                TotalShares = result.SharesData?.Keepers.Count
+            });
             Console.WriteLine($"\n✓ Secret shares have been saved to:");
             Console.WriteLine($"  {result.OutputFilePath}");
             Console.WriteLine($"\nIMPORTANT: Distribute each keeper's information securely.");
@@ -161,16 +210,19 @@ class Program
         }
         else
         {
+            _structuredLogger?.LogError("Failed to create secret shares", new { ErrorMessage = result.Message });
             Console.WriteLine($"\n✗ {result.Message}");
         }
     }
 
     static async Task ReconstructSecretAsync()
     {
+        _structuredLogger?.LogInformation("Starting reconstruct secret operation", new { });
         Console.WriteLine("\n=== Reconstruct Secret ===\n");
         
         if (_ceremonyManager == null)
         {
+            _structuredLogger?.LogError("Ceremony manager not initialized for reconstruct", new { });
             Console.WriteLine("✗ Ceremony manager not initialized");
             return;
         }
@@ -179,6 +231,11 @@ class Program
         
         if (result.Success && result.ReconstructedSecret != null)
         {
+            _structuredLogger?.LogInformation("Secret reconstructed successfully", new 
+            { 
+                SecretLength = result.ReconstructedSecret.Length,
+                IsValidUtf8 = IsValidUtf8(result.ReconstructedSecret)
+            });
             Console.WriteLine("\n✓ Secret successfully reconstructed and verified!");
             Console.WriteLine($"Secret (hex): {Convert.ToHexString(result.ReconstructedSecret)}");
 
@@ -190,12 +247,14 @@ class Program
                     Console.WriteLine($"Secret (UTF-8): {utf8String}");
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _structuredLogger?.LogException(ex, "Error converting secret to UTF-8", "reconstruct");
             }
         }
         else
         {
+            _structuredLogger?.LogError("Failed to reconstruct secret", new { ErrorMessage = result.Message });
             Console.WriteLine($"\n✗ {result.Message}");
         }
     }
@@ -232,6 +291,7 @@ class Program
         }
         catch (Exception ex)
         {
+            _structuredLogger?.LogException(ex, "Error handling input request", e.RequestId);
             e.CompletionSource.SetException(ex);
         }
         finally
@@ -315,6 +375,7 @@ class Program
         }
         catch (InvalidOperationException ex)
         {
+            _structuredLogger?.LogException(ex, "Interactive console required", "secure_input");
             throw new InvalidOperationException(
                 "This application requires an interactive console. " +
                 "Please run it directly in a terminal (cmd, PowerShell, Terminal, etc.) " +

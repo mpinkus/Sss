@@ -70,7 +70,7 @@ namespace Shamir.Ceremony.Common.Tests
         [TestMethod]
         public void CeremonyManager_Constructor_WithNullConfig_ShouldThrow()
         {
-            Assert.ThrowsException<NullReferenceException>(() => new CeremonyManager(null!));
+            Assert.ThrowsException<ArgumentNullException>(() => new CeremonyManager(null!));
         }
 
         [TestMethod]

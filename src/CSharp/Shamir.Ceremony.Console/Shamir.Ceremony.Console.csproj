@@ -13,6 +13,7 @@
 	<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
 	<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.8" />
 	<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+	<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +24,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shamir.Ceremony.Common\Shamir.Ceremony.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.8" />
   </ItemGroup>
 	
 </Project>
