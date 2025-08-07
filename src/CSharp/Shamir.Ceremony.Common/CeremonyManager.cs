@@ -16,6 +16,7 @@ public class CeremonyManager
 {
     private readonly CeremonyConfiguration _configuration;
     private readonly CryptographyService _cryptographyService;
+    private readonly IStructuredLogger? _structuredLogger;
     private SessionManager? _sessionManager;
     private AuditLogger? _auditLogger;
     private string _sessionId = string.Empty;
@@ -26,10 +27,18 @@ public class CeremonyManager
     public event EventHandler<ValidationEventArgs>? ValidationResult;
     public event EventHandler<CompletionEventArgs>? OperationCompleted;
 
-    public CeremonyManager(CeremonyConfiguration configuration)
+    public CeremonyManager(CeremonyConfiguration configuration, IStructuredLogger? structuredLogger = null)
     {
-        _configuration = configuration;
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _cryptographyService = new CryptographyService(configuration.Security);
+        _structuredLogger = structuredLogger;
+        
+        if (configuration.Security.AuditLogEnabled)
+        {
+            _auditLogger = new AuditLogger(configuration.Security, "ceremony", "default");
+        }
+        
+        _sessionManager = new SessionManager("ceremony", "default", new byte[32], _cryptographyService);
     }
 
     public async Task<CeremonyResult> CreateSharesAsync()
@@ -132,6 +141,7 @@ public class CeremonyManager
         }
         catch (Exception ex)
         {
+            _structuredLogger?.LogException(ex, "CreateSharesAsync", _sessionId);
             _auditLogger?.LogAudit("CREATE_FAILED", $"Share creation failed: {ex.Message}");
             OnOperationCompleted(false, $"Share creation failed: {ex.Message}", "CREATE_SHARES", null);
             return new CeremonyResult
@@ -169,6 +179,7 @@ public class CeremonyManager
             }
             catch (Exception ex)
             {
+                _structuredLogger?.LogException(ex, "ReconstructSecretAsync - JSON parsing", _sessionId);
                 _auditLogger?.LogAudit("RECONSTRUCT_FAILED", $"Invalid JSON file: {ex.Message}");
                 return new CeremonyResult
                 {
@@ -236,6 +247,7 @@ public class CeremonyManager
         }
         catch (Exception ex)
         {
+            _structuredLogger?.LogException(ex, "ReconstructSecretAsync", _sessionId);
             _auditLogger?.LogAudit("RECONSTRUCT_FAILED", ex.Message);
             _sessionManager?.AddEvent("RECONSTRUCTION_FAILED", ex.Message);
             OnOperationCompleted(false, $"Secret reconstruction failed: {ex.Message}", "RECONSTRUCT_SECRET", null);
@@ -497,6 +509,7 @@ public class CeremonyManager
         }
         catch (Exception ex)
         {
+            _structuredLogger?.LogException(ex, "TestReconstruction", _sessionId);
             OnValidationResult(false, $"Reconstruction test failed: {ex.Message}", "RECONSTRUCTION_TEST");
             return false;
         }

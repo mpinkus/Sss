@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace Shamir.Ceremony.Common.Configuration;
+namespace Shamir.Ceremony.Common.Configuration.Validators;
 
 public class MongoDbSettingsValidator : AbstractValidator<MongoDbSettings>
 {
