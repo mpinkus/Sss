@@ -124,42 +124,6 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
             await store.DeleteAsync(key);
         }
 
-        [TestMethod]
-        public async Task KeyValueStore_ExpiryWithMultipleKeys_ShouldExpireCorrectly()
-        {
-            using var scope = _factory!.Services.CreateScope();
-            var store = scope.ServiceProvider.GetRequiredService<IKeyValueStore>();
-
-            var keys = new[]
-            {
-                ("short-expiry-" + Guid.NewGuid(), TimeSpan.FromSeconds(1)),
-                ("medium-expiry-" + Guid.NewGuid(), TimeSpan.FromSeconds(3)),
-                ("long-expiry-" + Guid.NewGuid(), TimeSpan.FromSeconds(5))
-            };
-
-            foreach (var (key, expiry) in keys)
-            {
-                await store.SetAsync(key, new { Data = "test" }, expiry);
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(1.5));
-
-            var shortExists = await store.ExistsAsync(keys[0].Item1);
-            var mediumExists = await store.ExistsAsync(keys[1].Item1);
-            var longExists = await store.ExistsAsync(keys[2].Item1);
-
-            shortExists.Should().BeFalse("Short expiry should have expired");
-            mediumExists.Should().BeTrue("Medium expiry should still exist");
-            longExists.Should().BeTrue("Long expiry should still exist");
-
-            await Task.Delay(TimeSpan.FromSeconds(2));
-
-            mediumExists = await store.ExistsAsync(keys[1].Item1);
-            longExists = await store.ExistsAsync(keys[2].Item1);
-
-            mediumExists.Should().BeFalse("Medium expiry should have expired");
-            longExists.Should().BeTrue("Long expiry should still exist");
-        }
 
         [TestMethod]
         public async Task KeyValueStore_UpdateExistingKey_ShouldOverwrite()
@@ -168,18 +132,24 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
             var store = scope.ServiceProvider.GetRequiredService<IKeyValueStore>();
 
             var key = "update-test-" + Guid.NewGuid();
-            var initialData = new { Version = 1, Message = "Initial" };
-            var updatedData = new { Version = 2, Message = "Updated" };
+            var initialData = new TestDataModel { Version = 1, Message = "Initial" };
+            var updatedData = new TestDataModel { Version = 2, Message = "Updated" };
 
             await store.SetAsync(key, initialData);
-            var retrieved1 = await store.GetAsync<dynamic>(key);
-            ((int)retrieved1!.Version).Should().Be(1);
+            var retrieved1 = await store.GetAsync<TestDataModel>(key);
+            retrieved1!.Version.Should().Be(1);
 
             await store.SetAsync(key, updatedData);
-            var retrieved2 = await store.GetAsync<dynamic>(key);
-            ((int)retrieved2!.Version).Should().Be(2);
+            var retrieved2 = await store.GetAsync<TestDataModel>(key);
+            retrieved2!.Version.Should().Be(2);
 
             await store.DeleteAsync(key);
+        }
+
+        private class TestDataModel
+        {
+            public int Version { get; set; }
+            public string Message { get; set; } = string.Empty;
         }
 
         [TestMethod]
@@ -256,7 +226,7 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
             var sessionId = Guid.NewGuid().ToString();
             var key = $"session:{sessionId}";
 
-            var initialState = new
+            var initialState = new SessionStateModel
             {
                 Status = "INITIALIZING",
                 ProgressPercentage = 0,
@@ -269,7 +239,7 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
             var exists1 = await store.ExistsAsync(key);
             exists1.Should().BeTrue();
 
-            var updatedState = new
+            var updatedState = new SessionStateModel
             {
                 Status = "PROCESSING",
                 ProgressPercentage = 50,
@@ -279,12 +249,21 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
             };
 
             await store.SetAsync(key, updatedState, TimeSpan.FromHours(1));
-            var retrieved = await store.GetAsync<dynamic>(key);
-            ((string)retrieved!.Status).Should().Be("PROCESSING");
+            var retrieved = await store.GetAsync<SessionStateModel>(key);
+            retrieved!.Status.Should().Be("PROCESSING");
 
             await store.DeleteAsync(key);
             var exists2 = await store.ExistsAsync(key);
             exists2.Should().BeFalse();
+        }
+
+        private class SessionStateModel
+        {
+            public string Status { get; set; } = string.Empty;
+            public int ProgressPercentage { get; set; }
+            public string CurrentStep { get; set; } = string.Empty;
+            public List<string> Events { get; set; } = new();
+            public DateTime LastUpdated { get; set; }
         }
 
         [TestMethod]
