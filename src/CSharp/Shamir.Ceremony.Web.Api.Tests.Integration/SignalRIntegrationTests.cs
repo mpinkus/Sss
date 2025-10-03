@@ -239,7 +239,9 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
 
             await hubConnection.StartAsync();
             await hubConnection.InvokeAsync("JoinSession", sessionId);
-            await Task.Delay(200);
+            
+            await Task.Delay(500);
+            receivedMessages.Clear();
 
             await hubConnection.InvokeAsync("LeaveSession", sessionId);
             await Task.Delay(200);
@@ -251,7 +253,7 @@ namespace Shamir.Ceremony.Web.Api.Tests.Integration
             await hubConnection.StopAsync();
             await hubConnection.DisposeAsync();
 
-            Assert.AreEqual(messageCountAfterLeave, receivedMessages.Count, "Should not receive messages after leaving session");
+            Assert.AreEqual(0, receivedMessages.Count, "Should not receive messages after leaving session");
         }
 
         [TestMethod]
