@@ -9,6 +9,15 @@ public static class ShamirSecretShare
 
     public static List<Share> GenerateShares(byte[] secret, int threshold, int numShares)
     {
+        if (secret == null || secret.Length == 0)
+            throw new ArgumentException("Secret cannot be null or empty", nameof(secret));
+        if (threshold <= 0)
+            throw new ArgumentException("Threshold must be greater than 0", nameof(threshold));
+        if (numShares <= 0)
+            throw new ArgumentException("Number of shares must be greater than 0", nameof(numShares));
+        if (threshold > numShares)
+            throw new ArgumentException("Threshold cannot be greater than number of shares", nameof(threshold));
+        
         var shares = new List<Share>();
         var coefficients = new byte[threshold][];
 
